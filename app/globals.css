@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #1B2A4A;
+  --cream: #F7F3EB;
+  --red: #C0392B;
+  --peach: #C97858;
+  --cream-dark: #E8E0D4;
+  --navy-muted: #3D4F6F;
+  --background: var(--cream);
+  --foreground: var(--navy);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-instrument);
+  --font-mono: var(--font-plex-mono);
+}
+
+body {
+  background: var(--cream);
+  color: var(--navy);
+  font-family: var(--font-instrument), system-ui, sans-serif;
+}
+
+/* RainbowKit theme overrides — solid colors, no gradients */
+[data-rk] {
+  --rk-colors-accentColor: var(--red);
+  --rk-colors-accentColorForeground: white;
+  --rk-colors-modalBackground: white;
+  --rk-colors-modalText: var(--navy);
+  --rk-colors-connectButtonBackground: var(--navy);
+  --rk-colors-connectButtonText: white;
+}
