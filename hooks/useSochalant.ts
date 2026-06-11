@@ -22,15 +22,19 @@ import { contracts, poolKey, TOKENS } from "@/lib/contracts";
 import { wagmiConfig } from "@/lib/wagmi";
 import { combineVaults, emptyVault, mapVault } from "@/lib/format";
 import { riskLevelFromIndex } from "@/lib/hedge-status";
-import { calculateRiskScore, createInitialPoolState, generateSimulationData } from "@/lib/risk-engine";
+import {
+  calculateRiskScore,
+  createInitialPoolState,
+  generateSimulationData,
+} from "@/lib/risk-engine";
 import type { PoolState, RiskBreakdown } from "@/lib/types";
 
 export type TokenKey = "A" | "B";
 
 const SWAP_PRESETS = [
-  { label: "Calm Buy", priceChange: 1e15, volume: 2e17, isBuy: true },
-  { label: "Heavy Sell", priceChange: 5e16, volume: 8e17, isBuy: false },
-  { label: "Volatility Spike", priceChange: 2e17, volume: 5e17, isBuy: true },
+  { label: "Calm Buy", priceChange: 2e16, volume: 5e17, isBuy: true },
+  { label: "Heavy Sell", priceChange: 1e17, volume: 1e18, isBuy: false },
+  { label: "Volatility Spike", priceChange: 8e17, volume: 2e18, isBuy: true },
 ] as const;
 
 function mapPoolState(data: {
@@ -76,12 +80,15 @@ export function useSochalant() {
     setSwapLog((prev) => [entry, ...prev.slice(0, 4)]);
   }, []);
 
-  const pushReactiveEvent = useCallback((event: Omit<ReactiveEvent, "id" | "timestamp">) => {
-    setReactiveEvents((prev) => [
-      { ...event, id: crypto.randomUUID(), timestamp: Date.now() },
-      ...prev.slice(0, 9),
-    ]);
-  }, []);
+  const pushReactiveEvent = useCallback(
+    (event: Omit<ReactiveEvent, "id" | "timestamp">) => {
+      setReactiveEvents((prev) => [
+        { ...event, id: crypto.randomUUID(), timestamp: Date.now() },
+        ...prev.slice(0, 9),
+      ]);
+    },
+    [],
+  );
 
   const { data: poolStateRaw, refetch: refetchPoolState } = useReadContract({
     address: contracts.hook,
@@ -129,18 +136,27 @@ export function useSochalant() {
   }, [poolStateRaw]);
 
   const vaultA = useMemo(
-    () => (vaultARaw ? mapVault(vaultARaw as Parameters<typeof mapVault>[0]) : emptyVault()),
+    () =>
+      vaultARaw
+        ? mapVault(vaultARaw as Parameters<typeof mapVault>[0])
+        : emptyVault(),
     [vaultARaw],
   );
   const vaultB = useMemo(
-    () => (vaultBRaw ? mapVault(vaultBRaw as Parameters<typeof mapVault>[0]) : emptyVault()),
+    () =>
+      vaultBRaw
+        ? mapVault(vaultBRaw as Parameters<typeof mapVault>[0])
+        : emptyVault(),
     [vaultBRaw],
   );
   const vault = useMemo(
     () => (tokenKey === "A" ? vaultA : vaultB),
     [tokenKey, vaultA, vaultB],
   );
-  const combinedVault = useMemo(() => combineVaults(vaultA, vaultB), [vaultA, vaultB]);
+  const combinedVault = useMemo(
+    () => combineVaults(vaultA, vaultB),
+    [vaultA, vaultB],
+  );
 
   const breakdown: RiskBreakdown = useMemo(() => {
     const params = lastSwapParams ?? { priceChange: 0, volume: 0 };
@@ -160,19 +176,27 @@ export function useSochalant() {
     const lastPoint = simulationData[simulationData.length - 1];
     const ilReduction =
       lastPoint.ilUnprotected > 0
-        ? ((lastPoint.ilUnprotected - lastPoint.ilSochalant) / lastPoint.ilUnprotected) * 100
+        ? ((lastPoint.ilUnprotected - lastPoint.ilSochalant) /
+            lastPoint.ilUnprotected) *
+          100
         : 0;
     const yieldImprovement =
       lastPoint.unprotected > 0
-        ? ((lastPoint.sochalant - lastPoint.unprotected) / lastPoint.unprotected) * 100
+        ? ((lastPoint.sochalant - lastPoint.unprotected) /
+            lastPoint.unprotected) *
+          100
         : 0;
+
+    const totalVolume = poolState.buyVolume + poolState.sellVolume;
+    const estFees = (totalVolume * 0.003) / 1e18; // 0.3% fee tier
 
     return {
       totalValue: combinedVault.seniorValue + combinedVault.juniorValue,
-      seniorApy: 8.2,
-      juniorApy: 14.6,
+      seniorApy: 8.2 + poolState.volatility / 5e5,
+      juniorApy: 14.6 + poolState.volatility / 2e5,
       ilReduction: Math.round(ilReduction),
       yieldImprovement: yieldImprovement.toFixed(1),
+      estFees,
     };
   }, [combinedVault, simulationData]);
 
@@ -184,17 +208,27 @@ export function useSochalant() {
       refetchBalance(),
       refetchAllowance(),
     ]);
-  }, [refetchPoolState, refetchVaultA, refetchVaultB, refetchBalance, refetchAllowance]);
+  }, [
+    refetchPoolState,
+    refetchVaultA,
+    refetchVaultB,
+    refetchBalance,
+    refetchAllowance,
+  ]);
 
   useWatchContractEvent({
     address: contracts.hook,
     abi: sochalantHookAbi,
     eventName: "PoolStateUpdated",
     onLogs(logs) {
-      const log = logs[0] as unknown as { args: { riskScore?: bigint; riskLevel?: number } };
+      const log = logs[0] as unknown as {
+        args: { riskScore?: bigint; riskLevel?: number };
+      };
       if (!log?.args?.riskScore) return;
       const level = riskLevelFromIndex(Number(log.args.riskLevel ?? 0));
-      pushLog(`PoolStateUpdated · score ${log.args.riskScore.toString()} · ${level}`);
+      pushLog(
+        `PoolStateUpdated · score ${log.args.riskScore.toString()} · ${level}`,
+      );
       refetchPoolState();
     },
   });
@@ -204,7 +238,9 @@ export function useSochalant() {
     abi: sochalantHookAbi,
     eventName: "HedgeUpdated",
     onLogs(logs) {
-      const log = logs[0] as unknown as { args: { active?: boolean; intensity?: bigint } };
+      const log = logs[0] as unknown as {
+        args: { active?: boolean; intensity?: bigint };
+      };
       pushLog(
         `HedgeUpdated · ${log?.args?.active ? "active" : "idle"} · ${log?.args?.intensity?.toString() ?? "0"}%`,
       );
@@ -217,7 +253,9 @@ export function useSochalant() {
     abi: sochalantHookAbi,
     eventName: "ReactiveRiskUpdate",
     onLogs(logs) {
-      const log = logs[0] as unknown as { args: { riskScore?: bigint; volatility?: bigint } };
+      const log = logs[0] as unknown as {
+        args: { riskScore?: bigint; volatility?: bigint };
+      };
       pushReactiveEvent({
         type: "ReactiveRiskUpdate",
         message: `Risk score ${log?.args?.riskScore?.toString() ?? "?"} · vol ${log?.args?.volatility?.toString() ?? "?"}`,
@@ -230,7 +268,9 @@ export function useSochalant() {
     abi: hedgeCallbackReceiverAbi,
     eventName: "HedgeTriggered",
     onLogs(logs) {
-      const log = logs[0] as unknown as { args: { poolId?: string; riskScore?: bigint } };
+      const log = logs[0] as unknown as {
+        args: { poolId?: string; riskScore?: bigint };
+      };
       pushReactiveEvent({
         type: "HedgeTriggered",
         message: `Hedge triggered · pool ${String(log?.args?.poolId).slice(0, 10)}… · score ${log?.args?.riskScore?.toString() ?? "?"}`,
@@ -256,7 +296,9 @@ export function useSochalant() {
     abi: hedgeCallbackReceiverAbi,
     eventName: "PriceFeedUpdated",
     onLogs(logs) {
-      const log = logs[0] as unknown as { args: { price?: bigint; volatility?: bigint } };
+      const log = logs[0] as unknown as {
+        args: { price?: bigint; volatility?: bigint };
+      };
       pushReactiveEvent({
         type: "PriceFeedUpdated",
         message: `Price feed updated · ${log?.args?.price?.toString() ?? "?"} · vol ${log?.args?.volatility?.toString() ?? "?"}`,
@@ -283,7 +325,8 @@ export function useSochalant() {
         await waitForTransactionReceipt(wagmiConfig, { hash });
         await refetchAll();
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Transaction failed";
+        const message =
+          error instanceof Error ? error.message : "Transaction failed";
         pushLog(`${label} failed · ${message.slice(0, 60)}`);
         throw error;
       } finally {
@@ -355,8 +398,16 @@ export function useSochalant() {
   );
 
   const simulateSwap = useCallback(
-    async (params: { priceChange: number; volume: number; isBuy: boolean; label?: string }) => {
-      setLastSwapParams({ priceChange: params.priceChange, volume: params.volume });
+    async (params: {
+      priceChange: number;
+      volume: number;
+      isBuy: boolean;
+      label?: string;
+    }) => {
+      setLastSwapParams({
+        priceChange: params.priceChange,
+        volume: params.volume,
+      });
       await runTx(params.label ?? "SimulateSwap", () =>
         writeContractAsync({
           address: contracts.hook,

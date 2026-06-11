@@ -51,27 +51,36 @@ export function Dashboard() {
               Structured LP protection with risk tranching and adaptive hedging
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--navy-muted)]">
-              Live on-chain dashboard connected to SochalantHook. Mint test tokens, deposit
-              into tranched vaults, and trigger risk evaluation via{" "}
-              <code className="font-mono text-xs">simulateSwap()</code>.
+              Live on-chain dashboard connected to SochalantHook. Mint test
+              tokens, deposit into tranched vaults, and trigger risk evaluation
+              via <code className="font-mono text-xs">simulateSwap()</code>.
             </p>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3 text-xs">
-            {["Predict Risk", "Distribute Risk", "Hedge Risk"].map((step, i) => (
-              <span
-                key={step}
-                className="flex items-center gap-2 border border-[var(--cream-dark)] px-3 py-1.5 text-[var(--navy)]"
-              >
+            {["Predict Risk", "Distribute Risk", "Hedge Risk"].map(
+              (step, i) => (
                 <span
-                  className="flex h-5 w-5 items-center justify-center text-[10px] font-bold text-white"
-                  style={{ backgroundColor: i === 0 ? COLORS.navy : i === 1 ? COLORS.peach : COLORS.red }}
+                  key={step}
+                  className="flex items-center gap-2 border border-[var(--cream-dark)] px-3 py-1.5 text-[var(--navy)]"
                 >
-                  {i + 1}
+                  <span
+                    className="flex h-5 w-5 items-center justify-center text-[10px] font-bold text-white"
+                    style={{
+                      backgroundColor:
+                        i === 0
+                          ? COLORS.navy
+                          : i === 1
+                            ? COLORS.peach
+                            : COLORS.red,
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  {step}
                 </span>
-                {step}
-              </span>
-            ))}
+              ),
+            )}
           </div>
         </section>
 
@@ -79,13 +88,19 @@ export function Dashboard() {
           <StatCard
             label="Total LP Value"
             value={formatTokenAmount(stats.totalValue)}
-            subtext="On-chain vault (both tokens)"
+            subtext={`Est. Fees: $${stats.estFees.toFixed(2)}`}
           />
           <StatCard
             label="Risk Score"
             value={String(Math.round(poolState.riskScore))}
             subtext={poolState.riskLevel + " exposure"}
-            accent={poolState.riskLevel === "High" ? "red" : poolState.riskLevel === "Medium" ? "peach" : "navy"}
+            accent={
+              poolState.riskLevel === "High"
+                ? "red"
+                : poolState.riskLevel === "Medium"
+                  ? "peach"
+                  : "navy"
+            }
           />
           <StatCard
             label="Hedge Status"
@@ -103,7 +118,10 @@ export function Dashboard() {
 
         <section className="mb-8 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <RiskGauge score={poolState.riskScore} level={poolState.riskLevel} />
+            <RiskGauge
+              score={poolState.riskScore}
+              level={poolState.riskLevel}
+            />
             <TranchePanel
               vault={vault}
               seniorApy={stats.seniorApy}
