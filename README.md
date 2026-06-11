@@ -16,7 +16,7 @@
 | **Frontend (Vercel)** | [https://so-chalant.vercel.app](https://so-chalant.vercel.app) |
 | **Hook on Explorer** | [sepolia.uniscan.xyz](https://sepolia.uniscan.xyz/address/0x06D616E99B52d1533bf8E6c8e8ACAD6E4907C8c0) |
 | **Presentation** | [https://docs.google.com/presentation/d/1vUnnuRt9CxxZe-v1HlfIVsVIczbiJY0cOziqVGo3nMk/edit?usp=sharing](https://docs.google.com/presentation/d/1vUnnuRt9CxxZe-v1HlfIVsVIczbiJY0cOziqVGo3nMk/edit?usp=sharing) |
-| **Demo Video** | *[insert link]* |
+| **Demo Video** | [https://www.loom.com/share/322698e7461e4b1fa0ab967d48306fff](https://www.loom.com/share/322698e7461e4b1fa0ab967d48306fff)|
 
 ## On-Chain Interactions
 
