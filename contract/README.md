@@ -1,66 +1,40 @@
-## Foundry
+# SoChalant Smart Contracts 🏗️
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This repository contains the Uniswap v4 hook and Reactive Network infrastructure for the SoChalant protocol.
 
-Foundry consists of:
+## 📁 Contract Structure
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- **`src/SochalantHook.sol`**: The core Uniswap v4 hook. It manages pool state, tracks swap volume and volatility, and triggers risk updates.
+- **`src/RiskEngine.sol`**: A library that calculates a real-time risk score based on price movement, swap size, volatility, and volume imbalance.
+- **`src/TrancheManager.sol`**: Handles the internal accounting for senior and junior risk tranches.
+- **`src/ReactiveOracleSync.sol`**: The Reactive Contract that lives on the Reactive Network. It monitors hook events and autonomously triggers callbacks for hedging.
+- **`src/HedgeCallbackReceiver.sol`**: The entry point for Reactive Network callbacks on the destination chain (Unichain Sepolia).
 
-## Documentation
+## 🔄 Reactive Flow
 
-https://book.getfoundry.sh/
+1. **`SochalantHook`** -> Emits `ReactiveRiskUpdate`.
+2. **`ReactiveOracleSync`** -> Catch event -> Evaluates if `riskScore > 70`.
+3. **`ReactiveOracleSync`** -> Emits `Callback` to `HedgeCallbackReceiver`.
+4. **`HedgeCallbackReceiver`** -> `triggerHedge()` -> Logs final action and updates state.
 
-## Usage
+## 🚀 Usage
 
 ### Build
-
 ```shell
-$ forge build
+forge build
 ```
 
 ### Test
-
 ```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
+forge test
 ```
 
 ### Deploy
+Deployment scripts are located in `script/`. Use the following command to deploy on Unichain Sepolia:
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+forge script script/SochalantDeploy.s.sol --rpc-url $UNICHAIN_RPC --private-key $PRIVATE_KEY --broadcast
 ```
 
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+## 📜 License
+MIT
